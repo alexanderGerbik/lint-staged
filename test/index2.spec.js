@@ -33,6 +33,7 @@ describe('lintStaged', () => {
         },
         "exitOnError": false,
         "nonTTYRenderer": "verbose",
+        "registerSignalListeners": false,
         "renderer": "silent",
       }
     `)
@@ -58,8 +59,24 @@ describe('lintStaged', () => {
         },
         "exitOnError": false,
         "nonTTYRenderer": "verbose",
+        "registerSignalListeners": false,
         "renderer": "verbose",
       }
     `)
+  })
+
+  it('should catch errors from js function config', async () => {
+    const logger = makeConsoleMock()
+    const config = {
+      '*': () => {
+        throw new Error('failed config')
+      },
+    }
+
+    expect.assertions(2)
+    await expect(lintStaged({ config }, logger)).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"failed config"`
+    )
+    expect(logger.printHistory()).toMatchSnapshot()
   })
 })

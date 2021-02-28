@@ -489,13 +489,10 @@ describe('lint-staged', () => {
 
     // Nothing is wrong, so a new commit is created and file is pretty
     expect(await execGit(['rev-list', '--count', 'HEAD'])).toEqual('4')
-    expect(await execGit(['log', '-1', '--pretty=%B'])).toMatchInlineSnapshot(`
-      "Merge branch 'branch-b'
-
-      # Conflicts:
-      #	test.js
-      "
-    `)
+    const log = await execGit(['log', '-1', '--pretty=%B'])
+    expect(log).toMatch(`Merge branch 'branch-b`)
+    expect(log).toMatch(`Conflicts:`)
+    expect(log).toMatch(`test.js`)
     expect(await readFile('test.js')).toEqual(fileInBranchBFixed)
   })
 
@@ -1034,6 +1031,27 @@ describe('lint-staged', () => {
     await expect(gitCommit(fixJsConfig)).resolves.toEqual(undefined)
     expect(await execGit(['rev-list', '--count', 'HEAD'])).toEqual('2')
     expect(await readFile('--looks-like-flag.js')).toEqual(testJsFilePretty)
+  })
+
+  it('should work when a branch named stash exists', async () => {
+    // create a new branch called stash
+    await execGit(['branch', 'stash'])
+
+    // Stage multiple ugly files
+    await appendFile('test.js', testJsFileUgly)
+    await execGit(['add', 'test.js'])
+
+    await appendFile('test2.js', testJsFileUgly)
+    await execGit(['add', 'test2.js'])
+
+    // Run lint-staged with `prettier --write` and commit pretty file
+    await gitCommit(fixJsConfig)
+
+    // Nothing is wrong, so a new commit is created and file is pretty
+    expect(await execGit(['rev-list', '--count', 'HEAD'])).toEqual('2')
+    expect(await execGit(['log', '-1', '--pretty=%B'])).toMatch('test')
+    expect(await readFile('test.js')).toEqual(testJsFilePretty)
+    expect(await readFile('test2.js')).toEqual(testJsFilePretty)
   })
 })
 
